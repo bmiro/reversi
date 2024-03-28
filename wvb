@@ -3,8 +3,8 @@
 import string
 
 
-X_SIZE = 8
-Y_SIZE = 8
+X_SIZE = 3
+Y_SIZE = 3
 
 WHITE = 'o'
 BLACK = 'x'
@@ -40,18 +40,20 @@ def init_board():
 
 def print_board(board_to_print=board, hints=None):
 
-    print("  " + "".join([str(x) for x in range(1, len(board_to_print[0]) + 1)]))
-    print("  " + '_' * len(board_to_print))
+    print("  " + string.ascii_lowercase[:X_SIZE])
+    print("  " + '-' * len(board_to_print))
 
-    i = 0
     for y in range(len(board_to_print)):
-        print(string.ascii_lowercase[y] + '|', end='')
+        print(str(y + 1) + '|', end='')
         for x in range(len(board_to_print[y])):
             cell = board_to_print[y][x]
             if hints and (x, y) in hints:
                 cell = hints[(x, y)]
             print(cell, end='')
-        print()
+        print('|' + str(y + 1))
+
+    print("  " + '-' * len(board_to_print))
+    print("  " + string.ascii_lowercase[:X_SIZE])
 
 
 def valid_move_input(x, y, candidate_positions=None):
@@ -76,14 +78,14 @@ def valid_move_input(x, y, candidate_positions=None):
 
 
 def translate_move(move):
-    x = int(move[1]) - 1
-    y = int(string.ascii_lowercase.index(move[0]))
+    x = int(string.ascii_lowercase.index(move[0]))
+    y = int(move[1]) - 1
 
     return (x, y)
 
 
 def translate_position(x, y):
-    return string.ascii_lowercase[y] + str(x + 1)
+    return string.ascii_lowercase[x] + str(y + 1)
 
 
 def estimate_flips():
@@ -180,11 +182,22 @@ if __name__ ==  '__main__':
     init_board()
     print_board()
 
+    passed = 0
     candidate_positions = estimate_flips()
-    while candidate_positions:
+    while candidate_positions and passed < 1:
+
+        # Allow one player to pass with no moves
+        # but stops game with both are locked.
+        if not candidate_positions:
+            passed += 1
+            turn = WHITE if turn == BLACK else BLACK
+            candidate_positions = estimate_flips()
+        else:
+            passed = 0
 
         if computer_player and turn == BLACK:
 
+            # TODO: Pick a random if there is a tie with the scores
             (x_pos, y_pos) = sorted(
                 candidate_positions.items(), key=lambda item: item[1]
             )[0][0]
@@ -212,9 +225,11 @@ if __name__ ==  '__main__':
 
     score = calc_score()
 
-    for player, amount in score.items():
+    for player, amount in score:
         print("{}: {}".format(player, amount))
 
-    winner = score[0][0]
-
-    print("The winner is: {}".format(winner.upper()))
+    if score[0][0] == score[1][0]:
+        print("Is a tie!")
+    else:
+        winner = score[0][0]
+        print("The winner is: {}!".format(winner))
