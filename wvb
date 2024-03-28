@@ -1,0 +1,295 @@
+#!/usr/bin/env python3
+
+import string
+
+X_SIZE = 8
+Y_SIZE = 8
+
+board = []
+
+white = 'o'
+black = 'x'
+empty = ' '
+
+turn = white
+
+
+def init_board():
+
+    global board
+
+    line = [] * X_SIZE
+
+    for y in range(Y_SIZE):
+        row = []
+        for x in range(X_SIZE):
+            row.append(empty)
+        board.append(row)
+
+    board[int(X_SIZE / 2 - 1)][int(Y_SIZE / 2 - 1)] = white
+    board[int(X_SIZE / 2)][int(Y_SIZE / 2 - 1)] = black
+    board[int(X_SIZE / 2 - 1)][int(Y_SIZE / 2)] = black
+    board[int(X_SIZE / 2)][int(Y_SIZE / 2)] = white
+
+
+def print_board():
+
+    print("  " + "".join([str(x) for x in range(1,9)]))
+    print("  " + '_' * len(board))
+
+    i = 0
+    for y in range(len(board)):
+        print(string.ascii_lowercase[y] + '|', end='')
+        for x in range(len(board[y])):
+            print(board[y][x], end='')
+        print()
+
+
+def valid_move_input(x, y):
+
+    if x > len(board[0]):
+        print("X axis overflow")
+        return False
+
+    if y > len(board):
+        print("Y axis overflow")
+        return False
+
+    if board[y][x] != empty:
+        print("Cell already full")
+        return False
+
+    return True
+
+
+def translate_move(move):
+    x = int(move[1]) - 1
+    y = int(string.ascii_lowercase.index(move[0]))
+
+    return (x, y)
+
+
+def translate_position(x, y):
+    return string.ascii_lowercase[y] + str(x + 1)
+
+
+def flip(positions):
+    global board
+
+    for x, y in positions:
+        print("Flipping {}".format(translate_position(x, y)))
+        board[y][x] = white if board[y][x] == black else black
+
+
+def move():
+
+    global turn
+    global board
+
+    move_canidate = input("Moves {}: ".format(turn))
+
+    (x_pos, y_pos) = translate_move(move_canidate)
+    while not valid_move_input(x_pos, y_pos):
+        print("Invalid move")
+        move_canidate = input("Moves {}: ".format(turn))
+        (x_pos, y_pos) = translate_move(move_canidate)
+
+    # Flips
+
+    ## Up flips
+    flip_candidates = []
+    ally_found = False
+    x = x_pos
+    for y in range(y_pos - 1, 0, -1):
+        print(y_pos)
+        print("UF - Testing: {}".format(translate_position(x,y)))
+        if board[y][x] == empty:
+            break
+
+        if board[y][x] == turn:
+            ally_found = True
+            break
+
+        # Is not empty nor ally so is a candidate to flip
+        # if an ally is found later.
+        flip_candidates.append((x, y))
+
+    if ally_found:
+        flip(flip_candidates)
+
+    ## Down Flips
+    flip_candidates = []
+    ally_found = False
+    x = x_pos
+    for y in range(y_pos + 1, Y_SIZE):
+        print("DF - Testing: {}".format(translate_position(x,y)))
+        if board[y][x] == empty:
+            break
+
+        if board[y][x] == turn:
+            ally_found = True
+            break
+
+        # Is not empty nor ally so is a candidate to flip
+        # if an ally is found later.
+        flip_candidates.append((x, y))
+
+    if ally_found:
+        flip(flip_candidates)
+
+    ## Left Flips
+    flip_candidates = []
+    ally_found = False
+    y = y_pos
+    for x in range(x_pos - 1, 0, -1):
+        print("LF - Testing: {}".format(translate_position(x,y)))
+        if board[y][x] == empty:
+            break
+
+        if board[y][x] == turn:
+            ally_found = True
+            break
+
+        # Is not empty nor ally so is a candidate to flip
+        # if an ally is found later.
+        flip_candidates.append((x, y))
+
+    if ally_found:
+        flip(flip_candidates)
+
+    ## Right Flips
+    flip_candidates = []
+    ally_found = False
+    y = y_pos
+    for x in range(x_pos + 1, X_SIZE):
+        print("RF - Testing: {}".format(translate_position(x,y)))
+        if board[y][x] == empty:
+            break
+
+        if board[y][x] == turn:
+            ally_found = True
+            break
+
+        # Is not empty nor ally so is a candidate to flip
+        # if an ally is found later.
+        flip_candidates.append((x, y))
+
+    if ally_found:
+        flip(flip_candidates)
+
+    ## Up-Left Flips
+    x = x_pos
+    y = y_pos
+    flip_candidates = []
+    ally_found = False
+    while x > 0 and y > 0:
+        x -= 1
+        y -= 1
+
+        print("DUL - Testing: {}".format(translate_position(x,y)))
+        if board[y][x] == empty:
+            break
+
+        if board[y][x] == turn:
+            ally_found = True
+            break
+
+        # Is not empty nor ally so is a candidate to flip
+        # if an ally is found later.
+        flip_candidates.append((x, y))
+
+    if ally_found:
+        flip(flip_candidates)
+
+    ## Up-Right Flips
+    x = x_pos
+    y = y_pos
+    flip_candidates = []
+    ally_found = False
+    while x < X_SIZE and y > 0:
+        x += 1
+        y -= 1
+
+        print("DUR - Testing: {}".format(translate_position(x,y)))
+        if board[y][x] == empty:
+            break
+
+        if board[y][x] == turn:
+            ally_found = True
+            break
+
+        # Is not empty nor ally so is a candidate to flip
+        # if an ally is found later.
+        flip_candidates.append((x, y))
+
+    if ally_found:
+        flip(flip_candidates)
+
+    ## Down-Left Flips
+    x = x_pos
+    y = y_pos
+    flip_candidates = []
+    ally_found = False
+    while x > 0 and y < Y_SIZE:
+        x -= 1
+        y += 1
+
+        print("DDL - Testing: {}".format(translate_position(x,y)))
+        if board[y][x] == empty:
+            break
+
+        if board[y][x] == turn:
+            ally_found = True
+            break
+
+        # Is not empty nor ally so is a candidate to flip
+        # if an ally is found later.
+        flip_candidates.append((x, y))
+
+    if ally_found:
+        flip(flip_candidates)
+
+    ## Down-Right Flips
+    x = x_pos
+    y = y_pos
+    flip_candidates = []
+    ally_found = False
+    while x < X_SIZE and y > Y_SIZE:
+        x += 1
+        y += 1
+
+        print("DDR - Testing: {}".format(translate_position(x,y)))
+        if board[y][x] == empty:
+            break
+
+        if board[y][x] == turn:
+            ally_found = True
+            break
+
+        # Is not empty nor ally so is a candidate to flip
+        # if an ally is found later.
+        flip_candidates.append((x, y))
+
+    if ally_found:
+        flip(flip_candidates)
+
+    # Lets move the piece!
+    board[y_pos][x_pos] = turn
+
+
+def finished():
+    return False
+
+
+if __name__ ==  '__main__':
+    init_board()
+    print_board()
+
+    while not finished():
+        move()
+        print_board()
+        turn = white if turn == black else black
+
+
+
+
