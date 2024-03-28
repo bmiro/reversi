@@ -1,0 +1,235 @@
+#!/usr/bin/env python3
+
+import string
+
+
+X_SIZE = 3
+Y_SIZE = 3
+
+WHITE = 'o'
+BLACK = 'x'
+EMPTY = ' '
+
+DIRECTION_VECTORS = {
+    '↑': (0, -1),  '↓': (0, 1),  '←': (-1, 0), '→': (1, 0),
+    '↖': (-1, -1), '↙': (-1, 1), '↗': (1, -1), '↘': (1, 1),
+}
+
+# State variables
+board = []
+turn = WHITE
+
+
+def init_board():
+
+    global board
+
+    line = [] * X_SIZE
+
+    for y in range(Y_SIZE):
+        row = []
+        for x in range(X_SIZE):
+            row.append(EMPTY)
+        board.append(row)
+
+    board[int(X_SIZE / 2 - 1)][int(Y_SIZE / 2 - 1)] = WHITE
+    board[int(X_SIZE / 2)][int(Y_SIZE / 2 - 1)] = BLACK
+    board[int(X_SIZE / 2 - 1)][int(Y_SIZE / 2)] = BLACK
+    board[int(X_SIZE / 2)][int(Y_SIZE / 2)] = WHITE
+
+
+def print_board(board_to_print=board, hints=None):
+
+    print("  " + string.ascii_lowercase[:X_SIZE])
+    print("  " + '-' * len(board_to_print))
+
+    for y in range(len(board_to_print)):
+        print(str(y + 1) + '|', end='')
+        for x in range(len(board_to_print[y])):
+            cell = board_to_print[y][x]
+            if hints and (x, y) in hints:
+                cell = hints[(x, y)]
+            print(cell, end='')
+        print('|' + str(y + 1))
+
+    print("  " + '-' * len(board_to_print))
+    print("  " + string.ascii_lowercase[:X_SIZE])
+
+
+def valid_move_input(x, y, candidate_positions=None):
+
+    if x > len(board[0]) - 1:
+        print("X axis overflow")
+        return False
+
+    if y > len(board) - 1:
+        print("Y axis overflow")
+        return False
+
+    if board[y][x] != EMPTY:
+        print("Cell already full")
+        return False
+
+    if candidate_positions and (x, y) not in candidate_positions:
+        print("No flips on this position")
+        return False
+
+    return True
+
+
+def translate_move(move):
+    x = int(string.ascii_lowercase.index(move[0]))
+    y = int(move[1]) - 1
+
+    return (x, y)
+
+
+def translate_position(x, y):
+    return string.ascii_lowercase[x] + str(y + 1)
+
+
+def estimate_flips():
+
+    estimated_flips = {}
+    for y_pos in range(Y_SIZE):
+        for x_pos in range(X_SIZE):
+            if board[y_pos][x_pos] in (BLACK, WHITE):
+                continue
+
+            for op, vect in DIRECTION_VECTORS.items():
+
+                flip_candidates = []
+                ally_found = False
+
+                x = x_pos + vect[0]
+                y = y_pos + vect[1]
+                while x >= 0 and x < X_SIZE and y >= 0 and y < Y_SIZE:
+                    if board[y][x] == EMPTY:
+                        break
+
+                    if board[y][x] == turn:
+                        ally_found = True
+                        break
+
+                    flip_candidates.append((x, y))
+
+                    x += vect[0]
+                    y += vect[1]
+
+                if ally_found and len(flip_candidates):
+                    estimated_flips.setdefault(
+                        (x_pos, y_pos),
+                        0
+                    )
+
+                    estimated_flips[(x_pos, y_pos)] += len(flip_candidates)
+
+    return estimated_flips
+
+
+def apply_flips():
+
+    global turn
+    global board
+
+    for op, vect in DIRECTION_VECTORS.items():
+        flip_candidates = []
+        ally_found = False
+
+        x = x_pos + vect[0]
+        y = y_pos + vect[1]
+        while x >= 0 and x < X_SIZE and y >= 0 and y < Y_SIZE:
+
+            if board[y][x] == EMPTY:
+                break
+
+            if board[y][x] == turn:
+                ally_found = True
+                break
+
+            # Is not EMPTY nor ally so is a candidate to flip if
+            # an ally is found later.
+            flip_candidates.append((x, y))
+
+            x += vect[0]
+            y += vect[1]
+
+        if ally_found:
+            for x, y in flip_candidates:
+                print("Flipping {}".format(translate_position(x, y)))
+                board[y][x] = WHITE if board[y][x] == BLACK else BLACK
+
+
+
+def calc_score():
+    score = {
+        WHITE: 0,
+        BLACK: 0,
+    }
+    for y in range(Y_SIZE):
+        for x in range(X_SIZE):
+            if board[y][x] in (BLACK, WHITE):
+                score[board[y][x]] += 1
+
+    return sorted(score.items(), key=lambda item: item[1], reverse=True)
+
+
+if __name__ ==  '__main__':
+
+    computer_answer = input("Play against the computer? [y/N]")
+    computer_player = computer_answer in ('y', 'Y')
+
+    init_board()
+    print_board()
+
+    passed = 0
+    candidate_positions = estimate_flips()
+    while candidate_positions and passed < 1:
+
+        # Allow one player to pass with no moves
+        # but stops game with both are locked.
+        if not candidate_positions:
+            passed += 1
+            turn = WHITE if turn == BLACK else BLACK
+            candidate_positions = estimate_flips()
+        else:
+            passed = 0
+
+        if computer_player and turn == BLACK:
+
+            # TODO: Pick a random if there is a tie with the scores
+            (x_pos, y_pos) = sorted(
+                candidate_positions.items(), key=lambda item: item[1]
+            )[0][0]
+
+            print("{} plays {}".format(turn, translate_position(x_pos, y_pos)))
+
+        else:
+
+            move_canidate = input("Moves {}: ".format(turn))
+            if move_canidate in ('h', 'help', 'hint'):
+                print_board(hints=candidate_positions)
+                continue
+
+            (x_pos, y_pos) = translate_move(move_canidate)
+            while not valid_move_input(x_pos, y_pos, candidate_positions.keys()):
+                print("Invalid move")
+                move_canidate = input("Moves {}: ".format(turn))
+                (x_pos, y_pos) = translate_move(move_canidate)
+
+        board[y_pos][x_pos] = turn
+        apply_flips()
+        print_board()
+        turn = WHITE if turn == BLACK else BLACK
+        candidate_positions = estimate_flips()
+
+    score = calc_score()
+
+    for player, amount in score:
+        print("{}: {}".format(player, amount))
+
+    if score[0][0] == score[1][0]:
+        print("Is a tie!")
+    else:
+        winner = score[0][0]
+        print("The winner is: {}!".format(winner))
