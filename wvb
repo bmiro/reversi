@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import copy
 import string
 
 
@@ -38,16 +39,17 @@ def init_board():
     board[int(X_SIZE / 2)][int(Y_SIZE / 2)] = WHITE
 
 
-def print_board():
+def print_board(board_to_print=board):
 
-    print("  " + "".join([str(x) for x in range(1, X_SIZE + 1)]))
-    print("  " + '_' * len(board))
+    print("  " + "".join([str(x) for x in range(1, len(board_to_print[0]) + 1)]))
+    print("  " + '_' * len(board_to_print))
 
     i = 0
-    for y in range(len(board)):
+    for y in range(len(board_to_print)):
         print(string.ascii_lowercase[y] + '|', end='')
-        for x in range(len(board[y])):
-            print(board[y][x], end='')
+        for x in range(len(board_to_print[y])):
+            cell = board_to_print[y][x] if board_to_print[y][x] != 0 else ' '
+            print(cell, end='')
         print()
 
 
@@ -87,6 +89,47 @@ def flip(positions):
         board[y][x] = WHITE if board[y][x] == BLACK else BLACK
 
 
+def estimate_flips():
+
+    board_estimated_flips = copy.deepcopy(board)
+
+    for y_pos in range(Y_SIZE):
+        for x_pos in range(X_SIZE):
+            if board_estimated_flips[y_pos][x_pos] in (BLACK, WHITE):
+                continue
+
+            for op, vect in DIRECTION_VECTORS.items():
+
+                flip_candidates = []
+                ally_found = False
+
+                x = x_pos + vect[0]
+                y = y_pos + vect[1]
+                while x >= 0 and x < X_SIZE and y >= 0 and y < Y_SIZE:
+                    if board[y][x] == EMPTY:
+                        break
+
+                    if board[y][x] == turn:
+                        ally_found = True
+                        break
+
+                    # Is not EMPTY nor ally so is a candidate to flip if
+                    # an ally is found later.
+                    flip_candidates.append((x, y))
+
+                    x += vect[0]
+                    y += vect[1]
+
+                if ally_found:
+                    if board_estimated_flips[y_pos][x_pos] == EMPTY:
+                        board_estimated_flips[y_pos][x_pos] = 0
+
+                    board_estimated_flips[y_pos][x_pos] += len(flip_candidates)
+
+    print_board(board_estimated_flips)
+
+
+
 def move():
 
     global turn
@@ -109,7 +152,7 @@ def move():
         y = y_pos + vect[1]
         while x >= 0 and x < X_SIZE and y >= 0 and y < Y_SIZE:
 
-#            print("{} testing: {}".format(op, translate_position(x, y)))            
+#            print("{} testing: {}".format(op, translate_position(x, y)))
             if board[y][x] == EMPTY:
                 break
 
@@ -136,6 +179,7 @@ if __name__ ==  '__main__':
 
     empty_cells = X_SIZE * Y_SIZE - 4
     while empty_cells:
+        estimate_flips()
         move()
         print_board()
         turn = WHITE if turn == BLACK else BLACK
@@ -150,6 +194,6 @@ if __name__ ==  '__main__':
         for x in range(X_SIZE):
             score[board[y][x]] += 1
 
-    winner = sorted(score.items(), key=lambda item: item[1])[0][0]
+    winner = sorted(score.items(), key=lambda item: item[1], reverse=True)[0][0]
     
     print("The winner is: {}".format(winner.upper()))
